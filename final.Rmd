@@ -1,0 +1,392 @@
+---
+title: "Final"
+author: "Bingyan Liang"
+date: "2023-05-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1
+
+
+
+```{r}
+library(survival)
+library(tidyverse)
+
+# Read in data
+invested <- read.table("invested2.txt", header = TRUE)
+invested <- na.omit(invested)
+invested <- invested[invested$time>0, ]
+
+summary(invested)
+```
+
+## 1.1
+
+Tabulate the event rates by treatment group (SD vs HD) and overall for (1) death (overall survival); (1a) death before hospitalization; (1b) death after hospitalization; (2) first hospitalization; (3) recurrent hospitalizations. Comment on the results.
+
+```{r, echo=FALSE}
+# Create table of event rates by treatment group and overall for death
+event1 <- c(sum(invested$status[invested$trtmnt=="HD"]>0),
+sum(invested$status[invested$trtmnt=="SD"]>0),
+sum(invested$status>0))
+
+time1 <- c(sum(invested$time[invested$trtmnt=="HD"]),
+sum(invested$time[invested$trtmnt=="SD"]),
+sum(invested$time))/12
+rate1 <- round(event1/time1,3)
+title <- c("HD", "SD", "Overall")
+rate1 <- rbind(title, rate1)
+# event Rate for death overall
+rate1
+```
+```{r}
+index <- order(invested$patid, invested$time)
+data <- invested[index,]
+before_hosp <- data[ !duplicated(data$patid), ]
+before <- before_hosp[ before_hosp$status==2, ]
+
+event2 <- c(sum(before$status[before$trtmnt=="HD"]>0),
+            sum(before$status[before$trtmnt=="SD"]>0),
+            sum(before$status>0))
+
+time2 <- c(sum(before_hosp$time[before_hosp$trtmnt=="HD"]),
+           sum(before_hosp$time[before_hosp$trtmnt=="SD"]),
+           sum(before_hosp$time))/12
+
+rate2 <- round(event2/time2, 3)
+rate2 <- rbind(title, rate2)
+#Event Rate for death before hospitalization
+rate2
+``` 
+```{r}
+index <- order(invested$patid, invested$time)
+data <- invested[index, ]
+after_hosp <- data[!duplicated(data$patid), ]
+after <- after_hosp[after_hosp$status==1, ]
+deaths <- length(which(data$status==2))
+
+event3 <- c(sum(after$status[after$trtmnt=="HD"]>0),
+            sum(after$status[after$trtmnt=="SD"]>0),
+            sum(after$status>0)) - deaths
+
+time3 <- c(sum(after_hosp$time[after_hosp$trtmnt=="HD"]),
+              sum(after_hosp$time[after_hosp$trtmnt=="SD"]),
+              sum(after_hosp$time))/12
+
+rate3 <- round(event3/time3, 3)
+rate3 <- rbind(title, rate3)
+
+# event Rate for death after hospitalization
+rate3
+```
+```{r}
+data.CE <- data[!duplicated(data$patid), ]
+first <- data.CE[data.CE$status==1, ]
+
+event4 <- c(sum(first$status[first$trtmnt=="HD"]>0),
+            sum(first$status[first$trtmnt=="SD"]>0),
+            sum(first$status>0))
+
+time4 <- c(sum(data.CE$time[data.CE$trtmnt=="HD"]),
+           sum(data.CE$time[data.CE$trtmnt=="SD"]),
+           sum(data.CE$time))/12
+
+rate4 <- round(event4/time4, 3)
+rate4 <- rbind(title, rate4)
+
+# event Rate for first hospitalization:
+rate4
+```
+```{r}
+event <- c(sum(invested$status[invested$trtmnt=="HD"]),
+           sum(invested$status[invested$trtmnt=="SD"]),
+           sum(invested$status>0))
+
+index <- order(data$patid,data$time,decreasing = TRUE)
+data <- invested[index,]
+
+last <- data[!duplicated(data$patid),]
+
+time <- c(sum(last$time[last$trt=="HD"]),
+sum(last$time[last$trt=="SD"]),
+sum(last$time))/12
+
+rate <- round(event/time,3)
+rate <- rbind(title, rate)
+# event Rate for recurrent hospitalization: 
+rate
+```
+
+Overall, the event rates for death and hospitalization are quite similar between the HD and SD groups. However, the event rate for recurrent hospitalization is higher in the HD group compared to the SD group. This suggests that patients in the HD group may have a higher risk of experiencing multiple hospitalizations over time.
+
+The event rate for death before hospitalization is also quite similar between the HD and SD groups, while the event rate for death after hospitalization is slightly higher in the HD group. This could suggest that patients in the HD group who are hospitalized may have a slightly higher risk of dying during or after their hospital stay compared to patients in the SD group.
+
+Overall, the event rate for recurrent hospitalization is highest among all the events, suggesting that hospitalization is a common occurrence for patients with CKD. This highlights the need for effective management strategies to prevent and manage hospitalizations in this patient population.
+
+
+## 1.2
+
+How many deaths/hospitalizations would be lost if we just focused on time to the first composite event (as we did in the midterm project).
+
+```{r}
+# Calculate number of deaths/hospitalizations lost by only looking at time to first event
+invested2 <- invested[!duplicated(invested$patid), ]
+lost <- length(invested$status!=0) - length(invested2$status!=0)
+lost
+```
+
+## 1.3
+
+Plot and compare histograms for the distribution of the number of hospitalizations per patient by treatment group. What percentages of patients are hospitalization-free; what is the maximum number of hospitalizations per patient in each group?
+
+```{r}
+group1 <- subset(invested, trtmnt == "HD")
+group2 <- subset(invested, trtmnt == "SD")
+
+count1 <- aggregate(status ~ patid, data = group1, FUN = function(x) sum(x == 1))
+```
+```{r}
+ratio <- 1 - (sum(invested$status==1)/sum(invested$status))
+# Percentage of hospitalization-free:
+round(ratio * 100, 2)
+```
+```{r}
+par(mfrow=c(1,2))
+hist(count1$status, main = "Treatment Group HD", xlab ="Number of Hospitalizations")
+
+count2 <- aggregate(status ~ patid, data = group2, FUN = function(x) sum(x == 1))
+hist(count2$status, main = "Treatment Group SD", xlab ="Number of Hospitalizations")
+```
+```{r,echo=FALSE}
+group1 <- data[data$trtmnt=='SD' & data$status==1,]
+group2 <- data[data$trtmnt=='HD' & data$status==1,]
+table1 <- table(group1$patid)
+table2 <- table(group2$patid)
+```
+
+```{r}
+# Max number of hospitalizations in HD group:
+max(table1)
+```
+
+```{r}
+
+# Max number of hospitalizations in SD group:
+max(table2)
+```
+
+## 2.1
+
+With death as a competing risk, estimate, plot and test the cumulative incidence function for the first hospitalization between the two treatment groups.
+
+```{r}
+library(cmprsk)
+
+# data for first hospitalization
+index <- order(invested$patid,data$time)
+invested <- invested[index,]
+invested2$status <- (invested2$status>0)+0
+
+# Estimate cumulative incidence
+obj <- cuminc(invested2$time, invested2$status, invested2$trtmnt, rho=0)
+
+# Plot cumulative incidence
+plot(obj)
+```
+
+## 2.2.1
+
+Fit a multiplicative intensity frailty model for recurrent hospitalizations against the treatment and other risk factors (assuming death is independent of hospitalizations conditioning on the frailty, so it can be treated as censoring);
+
+```{r, echo=FALSE}
+invested <- read.table("invested2.txt", header = TRUE)
+invested <- na.omit(invested)
+invested <- invested[invested$time>0, ]
+
+start <- c()
+current_patid <- 0
+current_time <- 0
+
+for (i in 1:(nrow(invested))) {
+  if (invested$patid[i] == current_patid) {
+    current_time <- invested$time[i-1]
+    start <- append(start, current_time)
+} 
+  else if (invested$patid[i] != current_patid){
+    current_patid = invested$patid[i]
+    current_time <- 0
+    start <- append(start, current_time)
+}
+}
+length(start) == nrow(invested)
+invested <- cbind(start, invested)
+invested$status <- (invested$status>0)+0
+```
+```{r}
+# Fit a Cox proportional hazards model with shared frailty for recurrent hospitalizations
+frailty_model <- coxph(formula = Surv(start, time, status) ~ factor(trtmnt) + 
+                         gender + age + factor(race) + dbmi + factor(lveflt40) + factor(priormi) +
+                         factor(priorhf) + factor(diab) + factor(renal) + factor(ischstr) +
+                         factor(pad) + frailty(patid, dist = "gamma"), 
+                       data = invested)
+
+# Print the summary of the model
+summary(frailty_model)
+```
+
+## 2.2.2
+
+Fit a Cox model for overall survival with the same set of covariates.
+
+```{r}
+# Fit a Cox proportional hazards model for overall survival
+survival_model <- coxph(Surv(time, status != 0) ~ trtmnt + gender + age + race + dbmi + 
+                          lveflt40 + priormi + priorhf + diab + renal + ischstr + pad, 
+                        data = invested)
+
+# Print the summary of the model
+summary(survival_model)
+```
+
+## 2.2.3
+
+The direction and magnitude of the covariate effects can be interpreted from the coefficient estimates and corresponding p-values in the summary output of the models. Positive coefficients indicate higher risk, while negative coefficients indicate lower risk. A p-value less than 0.05 indicates statistical significance.
+
+
+## 2.3
+
+```{r}
+library(rmt)
+
+data <- read.table('invested2.txt')
+id <- data$patid
+time <- data$time
+status <- data$status
+trt <- data$trtmnt
+
+fit <- rmtfit(id, time, status, trt, type="recurrent")
+
+summary(fit,Kmax=1,tau=3.97)
+```
+```{r, echo=FALSE}
+plot(fit,conf=T,lwd=2, cex.lab=1.5,cex.axis=1.5,xlab="Follow-up time (years)", ylab="RMT-IF of training")
+```
+## 3.1
+
+Using the treatment variable and key risk factors, build a survival tree for the composite endpoint of hospitalization-free survival (i.e., time to the first composite event).
+
+```{r}
+library(rpart)
+library(rpart.plot)
+o <- order(data$patid,data$time)
+dat <- data[o,]
+data.CE <- dat[!duplicated(dat$patid),]
+data.CE <- data.CE[data.CE$time>0,]
+data.CE$status <- (data.CE$status>0)+0
+set.seed(1234)
+n <- nrow(data.CE)
+ind <- sample(1:n)[1:4000]
+train <- data.CE[ind,]
+test <- data.CE[-ind,]
+
+set.seed(12345)
+obj <- rpart(Surv(time, status) ~ factor(trtmnt) + factor(gender) + age + factor(race) + 
+               dbmi + factor(lveflt40) + factor(priormi) + factor(priorhf) + 
+               factor(diab) + factor(renal) + factor(ischstr) + factor(pad), 
+             control = rpart.control(xval = 10, minbucket = 2, cp=0),
+             data = train )
+
+cptable <- obj$cptable
+# complexity parameter values
+CP <- cptable[,1]
+# obtain the optimal parameter
+cp.opt <- CP[which.min(cptable[,4])]
+# Prune the tree
+fit <- prune(obj, cp = cp.opt)
+
+rpart.plot(fit)
+```
+## 3.2
+
+Based on the survival tree built in 3.1, plot the predicted hospitalization-free survival curves for two new patients, one treated with SD and the other HD, both:
+female; 60 years old; white; BMI 25; LVEF < 40%; with prior histories of MI, HF, diabetes, renal impairment, ischemic stroke, and peripheral artery disease.
+
+```{r}
+# create data frames for the new patients
+pat1 <- data[1,]
+pat1$trtmnt <- 'SD'
+pat1$gender <- 'Female'
+pat1$age <- 60
+pat1$race <- 'White'
+pat1$dbmi <- 25
+pat1$lveflt40 <- 'Yes'
+pat1$priormi <- 'Yes'
+pat1$priorhf <- 'Yes'
+pat1$diab <- 'Yes'
+pat1$renal <- 'Yes'
+pat1$ischstr <- 'Yes'
+pat1$pad <- 'Yes'
+pat2 <- pat1
+pat2$trtmnt <- 'HD'
+# Get the KM estimates for the outcome in each terminal node
+km <- survfit(Surv(time, status) ~ fit$where, train)
+tmp <- summary(km)
+tmp.strata <- as.integer(sub(".*=", "", tmp$strata))
+tmp.t <- tmp$time
+tmp.surv <- tmp$surv
+
+
+# Number of terminal nodes
+TN <- unique(tmp.strata)
+N <- length(TN)
+
+# Combine the predicted survival rates together, as functions of t
+t <- sort(unique(tmp.t))
+m <- length(t)
+fitted_surv=matrix(NA,m,N)
+for (j in 1:m){
+tj <- t[j]
+for (k in 1:N){
+tk <- c(0,tmp.t[tmp.strata==TN[k]])
+survk <- c(1,tmp.surv[tmp.strata==TN[k]])
+fitted_surv[j,k] <- survk[sum(tk<=tj)]
+}
+}
+
+# Get the terminal node prediction
+# for the test data
+library(treeClust)
+test_term1 <- rpart.predict.leaves(fit, pat1)
+n <- length(test_term1)
+St_tree1 <- matrix(NA,n,m)
+for (k in 1:N){
+ind <- which(test_term1==TN[k])
+St_tree1[ind,] <- matrix(fitted_surv[,k], nrow=length(ind),
+ncol=m, byrow=TRUE)
+}
+
+plot(t, St_tree1)
+```
+```{r}
+test_term2 <- rpart.predict.leaves(fit, pat2)
+n <- length(test_term2)
+St_tree2 <- matrix(NA,n,m)
+
+for (k in 1:N){
+ind <- which(test_term1==TN[k])
+St_tree2[ind,] <- matrix(fitted_surv[,k], nrow=length(ind),
+ncol=m, byrow=TRUE)
+}
+
+plot(t, St_tree2)
+```
+
+The objective of this study was to evaluate the impact of different doses of influenza vaccines and other risk factors on high-risk cardiovascular patients. Our findings revealed that the high-dose trivalent vaccine had a slightly increased incidence of hospitalizations and death compared to the standard dose. However, both the high-dose and standard-dose influenza vaccines showed efficacy in preventing cardio-thoracic events and decompensated heart failure based on our analysis.
+
+
+
