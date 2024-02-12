@@ -1,0 +1,324 @@
+---
+title: "midterm"
+author: "Bingyan Liang"
+date: "2023-03-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Descriptive statistics:
+
+Summarize the demographic variables (gender, age, race), BMI, and medical history(LVEF, MI, HF, diabetes, etc.) by treatment and overall. Be sure to also calculate the (composite) event rate of death/hospitalization.
+
+```{r include=FALSE}
+library(survival)
+library(table1)
+library(knitr)
+
+data <- read.table('invested1.txt')
+df <- data
+## table 1
+
+## label
+data <- na.omit(data)
+data$status <- factor(data$status,
+                      levels = c(0,1),
+                      labels = c("censoring","death/hospitalization"))
+
+# original tableone
+table1 <- table1(~ status + gender+ age + race + dbmi + lveflt40 + priormi + priorhf + diab + renal + ischstr + pad | trtmnt, data = data )
+print(table1)
+table <- data.frame(table1)
+
+# Numerator: total # of events
+# (N of events is sum of status variable)
+num.D <- c(sum(df$status[df$trtmnt=='HD']), 
+           sum(df$status[df$trtmnt=='SD']), 
+           sum(df$status))
+
+# Denominator: total length of follow-up (year)
+denom.D <- c(sum(df$time[df$trtmnt=='HD']), 
+             sum(df$time[df$trtmnt=='SD']), 
+             sum(df$time))/12
+
+# Death rate
+rate1 <- round(num.D/denom.D,3)
+rate <- c("death/hospitalization rate(1/year)", rate1)
+
+# add a row to table 1
+tableone <- rbind(table, rate)
+
+tableone[9,1] <- "age(years)"
+```
+```{r}
+kable(tableone)
+
+```
+
+## 2.Graphical analysis of subgroup effect:
+
+Plot the treatment-specific (HD vs SD) Kaplan—Meier curves for hospitalization-free survival probabilities within each gender and each race. 
+Comment on the difference in treatment effect across genders and races.
+
+First we plot the overall K-M curves.
+
+```{r, echo=FALSE}
+par(mfrow=c(1,1.5))
+df <- na.omit(df)
+## overall
+obj <- survfit(Surv(time,status)~trtmnt,data=df)
+plot(obj, ylim = c(0,1), lwd=2,frame=F, lty=c(2,1),
+     xlab="Time (months)",ylab="hospitalization-free survival probabilities",main="Overall",
+     cex.lab=1.5,cex.axis=1.5,cex.main=1.5)
+legend('bottomleft', lty=2:1,c("HD","SD"),
+       lwd=2,cex=1.5)
+```
+
+Next, we plot the event-free survival probabilities within each race.
+
+```{r, echo=FALSE}
+## black
+obj.bl <- survfit(Surv(time,status)~trtmnt,data=df[df$race=='Black/African American',])
+plot(obj.bl, lwd=2,frame=F, lty=c(2,1),
+     xlab="Time (months)",ylab="hospitalization-free survival probabilities",main="Black/African American",
+     cex.lab=1.5,cex.axis=1.5,cex.main=1.5)
+legend('bottomleft',lty=2:1,c("HD","SD"),
+       lwd=2,cex=1.5)
+
+## white
+obj.wh<- survfit(Surv(time,status)~trtmnt,data=df[df$race=='White',])
+plot(obj.wh, lwd=2,frame=F, lty=c(2,1),
+     xlab="Time (months)",ylab="hospitalization-free survival probabilities",main="White",
+     cex.lab=1.5,cex.axis=1.5,cex.main=1.5)
+legend('bottomleft',lty=2:1,c("HD","SD"),
+       lwd=2,cex=1.5)
+
+## Aboriginal/Native American
+obj.ab<- survfit(Surv(time,status)~trtmnt,data=df[df$race=='Aboriginal/Native American',])
+plot(obj.ab, lwd=2,frame=F, lty=c(2,1),
+     xlab="Time (months)",ylab="hospitalization-free survival probabilities",main="Aboriginal/Native American",
+     cex.lab=1.5,cex.axis=1.5,cex.main=1.5)
+legend('bottomleft',lty=2:1,c("HD","SD"),
+       lwd=2,cex=1.5)
+
+## Asian/Pacific Islander
+obj.as<- survfit(Surv(time,status)~trtmnt,data=df[df$race=='Asian/Pacific Islander',])
+plot(obj.as, lwd=2,frame=F, lty=c(2,1),
+     xlab="Time (months)",ylab="hospitalization-free survival probabilities",main="Asian/Pacific Islander",
+     cex.lab=1.5,cex.axis=1.5,cex.main=1.5)
+legend('bottomleft',lty=2:1,c("HD","SD"),
+       lwd=2,cex=1.5)
+
+## other
+obj.ot<- survfit(Surv(time,status)~trtmnt,data=df[df$race=='Other',])
+plot(obj.ot, lwd=2,frame=F, lty=c(2,1),
+     xlab="Time (months)",ylab="hospitalization-free survival probabilities",main="Other",
+     cex.lab=1.5,cex.axis=1.5,cex.main=1.5)
+legend('bottomleft',lty=2:1,c("HD","SD"),
+       lwd=2,cex=1.5)
+```
+
+Then, plot within each gender.
+
+```{r, echo=FALSE}
+## male
+obj.m <- survfit(Surv(time,status)~trtmnt,data=df[df$gender=='Male',])
+plot(obj.m, lwd=2,frame=F, lty=c(2,1),
+     xlab="Time (months)",ylab="hospitalization-free survival probabilities",main="Male",
+     cex.lab=1.5,cex.axis=1.5,cex.main=1.5)
+legend('bottomleft',lty=2:1,c("HD","SD"),
+       lwd=2,cex=1.5)
+
+## female
+obj.f<- survfit(Surv(time,status)~trtmnt,data=df[df$gender=='Female',])
+plot(obj.f, lwd=2,frame=F, lty=c(2,1),
+     xlab="Time (months)",ylab="hospitalization-free survival probabilities",main="Female",
+     cex.lab=1.5,cex.axis=1.5,cex.main=1.5)
+legend('bottomleft',lty=2:1,c("HD","SD"),
+       lwd=2,cex=1.5)
+```
+
+From the plots, we can conclude that, within different races, in Black/African American and Aboriginal/Native American groups, the HD group appears to enjoy higher event-free survival probabilities compared to the SD group. But overall, there did not appear to have a significant difference between the two treatment groups by race. To conduct a formal test on the effect of doses, we use the standard log-rank test stratified by race:
+```{r}
+## Stratified log-rank test (by race)
+survdiff(Surv(time,status)~trtmnt+ strata(race), data=df)
+```
+The result support our conclusion that there is no significant difference between two treatment groups.
+
+Also, within different genders, we can tell from the plot that there is no significant difference between two treatment groups, and the standard log-rank test stratified by gender can support our conclusion:
+```{r}
+## Stratified log-rank test (by gender)
+survdiff(Surv(time,status)~trtmnt+ strata(gender), data=df)
+```
+
+## 3. Multiple regression analysis:
+Build a Cox proportional hazards regression model to analyze the treatment effect and other risk factors for death/hospitalization. 
+Please include the following steps:
+    a. Assess formally whether treatment effect differs significantly by gender or race (by testing interactions);
+    b. Check the proportionality assumption on the each of the covariates and take steps to address possible violations;
+    c. Check whether the linear form is appropriate for age and BMI; make proper transformation/categorization in case of non-linearity;
+    d. Interpret the analysis results of your final model, e.g., what risk factors are most strongly or significantly associated with the primary endpoint and to what degree.
+
+First, conduct the cox proportional hazard model.
+
+```{r, echo=FALSE}
+#fit the Cox proportional hazards model
+obj <- coxph(Surv(time,status)~age+factor(gender)+factor(race)+dbmi+factor(lveflt40)+factor(priormi)
+             +factor(priorhf)+factor(diab)+factor(renal)+factor(ischstr)+factor(pad),data=df)
+summary(obj)
+
+#fit the Cox proportional hazards model with interaction terms
+obj.gen <- coxph(Surv(time,status)~factor(gender),data=df)
+summary(obj.gen)
+obj.race<- coxph(Surv(time,status)~factor(race),data=df)
+summary(obj.race)
+```
+
+The tests shows that for genders, there is no significance. And for race, it can give significant contributions on the result.
+
+We can check the proportionality assumption on the each of the covariates by assess a residual analysis.
+
+```{r, echo=FALSE}
+#Schoelfeld residuals
+#produce proportionality test results
+sch <- cox.zph(obj) 
+print(sch) 
+#Plot scaled Schoelfeld residuals for each covariate
+par(par(mar = c(4, 4, 2, 2)), mfrow=c(3,3))
+plot(sch,xlab="Time (months)",lwd=2,cex.lab=1.2,cex.axis=1.2)
+```
+
+From both the graphical and numerical results, it seems that proportionality is problematic on age, gender and Prior myocardial infarction.
+Since gender and priormi is categorical, we can take them off from the covariate list and use them instead as stratifying variables.
+First we remove gender:
+```{r, echo=FALSE}
+#fit the Cox proportional hazards model
+obj.stra <- coxph(Surv(time,status)~age+factor(race)+dbmi+factor(lveflt40)+factor(priorhf)+factor(diab)
+                  +factor(renal)+factor(ischstr)+factor(pad)+strata(gender)+factor(priormi),data=df)
+sch.stra <- cox.zph(obj.stra)
+print(sch.stra)
+```
+We can see that the global proportionality test goes to non-significant.
+Now we also remove the Prior myocardial infarction:
+```{r, echo=FALSE}
+#fit the Cox proportional hazards model
+obj.stra <- coxph(Surv(time,status)~age+factor(race)+dbmi+factor(lveflt40)+factor(priorhf)+factor(diab)
+                  +factor(renal)+factor(ischstr)+factor(pad)+strata(gender)+strata(priormi),data=df)
+sch.stra <- cox.zph(obj.stra)
+print(sch.stra)
+```
+We see from the above output that the global proportionality test becomes non-significant after removing gender and Prior myocardial infarction.
+
+To check whether the linear form is appropriate for age and BMI, we generate scatter plots for the martingale residuals against the covariates overlaid with a smoothed curve to better capture the trend.
+```{r, echo=FALSE}
+## Martingale residuals
+mart_resid <- resid(obj,type='martingale')
+
+#plot the martingale residuals against age and bmi
+
+## Age
+par(mfrow=c(1,2))
+plot(df$age, mart_resid,
+     xlab="age (years)", ylab="Martingale residuals",
+     main='age',cex.lab=1.5)
+lines(lowess(df$age, mart_resid),lwd=2)
+abline(0,0,lty=3,lwd=2)
+
+## bmi
+plot(df$dbmi, mart_resid,
+     xlab="bmi", ylab="Martingale residuals",
+     main='bmi',cex.lab=1.2)
+lines(lowess(df$dbmi, mart_resid),lwd=2)
+abline(0,0,lty=3,lwd=2)
+
+## log-Age
+par(mfrow=c(1,2))
+plot(log(df$age), mart_resid,
+     xlab="log-age", ylab="Martingale residuals",
+     main='log-age',cex.lab=1.5)
+lines(lowess(log(df$age), mart_resid),lwd=2)
+abline(0,0,lty=3,lwd=2)
+
+## log-bmi
+plot(log(df$dbmi), mart_resid,
+     xlab="log-bmi", ylab="Martingale residuals",
+     main='log-bmi',cex.lab=1.2)
+lines(lowess(log(df$dbmi), mart_resid),lwd=2)
+abline(0,0,lty=3,lwd=2)
+```
+
+Linear age and bmi are both problematic: there are substantial excess failures in elder people and people with higher bmi. To address it, we group age into a categorical variable agec, with agec=1: ≤ 40 years; agec=2: (40, 60] years, agec=3: (60, 80] years, and agec=4: > 80 years. Group bmi into a categorical variable bmic, with bmic=1: ≤ 30; bmic=2: (30, 50], bmic=3: (50, 70], and agec=4: > 70. The model is re-fitted, whose results are summarized below.
+
+```{r, echo=FALSE}
+# To address non-linear age
+# categorize age in agec
+# age<=40: agec=1
+# 40<age<=60: agec=2
+# 60<age<=80: agec=3
+# age>80: agec=4
+df$agec <- (df$age<=40)+2*(df$age>40&df$age<=60)+3*(df$age>60&df$age<=80)+4*(df$age>80)
+df$bmic <- (df$dbmi<=30)+2*(df$dbmi>30&df$dbmi<=50)+3*(df$dbmi>50&df$dbmi<=70)+4*(df$dbmi>70)
+
+#re-fit the model with agec and bmic
+obj.stra.final <- coxph(Surv(time,status)~factor(agec)+factor(race)+factor(bmic)+factor(lveflt40)+factor(priorhf)+factor(diab)+factor(renal)+factor(ischstr)+factor(pad)+strata(gender)+strata(priormi),data=df)
+
+#plot the estimated HRs for agec (Figure 4.6)
+# and confidence intervals
+final.sum <- summary(obj.stra.final)
+final.sum
+
+# Plot the age-group-specific HR and confidence
+# intervals from the re-fitted model
+ci.table=final.sum$conf.int
+hr=ci.table[3:5,1]
+hr.low=ci.table[3:5,3]
+hr.up=ci.table[3:5,4]
+
+par(mfrow=c(1,1))
+plot(1:4,c(1,hr),ylim=c(0,2.5),frame=F,xaxt='n',
+     xlab="Age (years)", ylab="Hazard ratio",pch=19,cex=1.5,cex.lab=1.2,
+     cex.axis=1.2)
+axis(1, at=c(1,2,3,4),labels=c("(20, 40]","(40, 60]","(60, 80]","(80, 100]"),cex.axis=1.5)
+# horizontal error bars
+arrows(2:4, hr.low, 2:4, hr.up, length=0.05, angle=90, code=3, lwd=2)
+lines(1:4,c(1,hr),lty=3,lwd=2)
+
+# Plot the bmi-group-specific HR and confidence
+# intervals from the re-fitted model
+
+hr1=ci.table[10:12,1]
+hr1.low=ci.table[10:12,3]
+hr1.up=ci.table[10:12,4]
+
+par(mfrow=c(1,1))
+plot(1:4,c(1,hr1),ylim=c(0,5),frame=F,xaxt='n',
+     xlab="bmi", ylab="Hazard ratio",pch=19,cex=1.5,cex.lab=1.2,
+     cex.axis=1.2)
+axis(1, at=c(1,2,3,4),labels=c("(10, 30]","(30, 50]","(50, 70]","(70, 90]"),cex.axis=1.2)
+# horizontal error bars
+arrows(2:4, hr1.low, 2:4, hr1.up, length=0.05, angle=90, code=3,lwd=2)
+lines(1:4,c(1,hr1),lty=3,lwd=2)
+```
+
+It can be seen that the age effect and bmi effecr are both nonlinear, with 80-100 years people at highest risk, 60-80 years at lowest risk, and younger people 20-40 years and 40-60 years at a slightly lower risk than older people. 30-50 bmi people at the highest risk and 10-30 bmi with the lowest risk.
+
+In our final model, among all the factor covariates we could see several terms that have significant effects on the result, with p-values:
+
+factor(bmic)3                      8.76e-05 ***
+
+factor(lveflt40)Yes                8.68e-09 ***
+
+factor(priorhf)Yes                 < 2e-16 ***
+
+factor(diab)Yes                    9.67e-07 ***
+
+factor(renal)Yes                   < 2e-16 ***
+
+factor(ischstr)Yes                 0.000116 ***
+
+
+## 4. Reporting: 
+This study compared the effects of high-dose versus standard-dose influenza vaccine on morbidity and mortality in high-risk cardiovascular patients. The results showed that, overall, there was no significant difference in morbidity and mortality between the two doses of vaccine in the high-risk population. However, the death/hospitalization rate was influenced by risk factors in patient demographics and medical history. 

@@ -1,0 +1,94 @@
+---
+title: '7.9'
+author: "Bingyan Liang"
+date: "2023-03-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Fit a proportional odds model
+We fit a proportional odds model to the data with the five risk factors as covariates. The results are shown in Table 7.1. It can be seen that younger
+age, male sex, histories of needle sharing, imprisonment, and drug injection in jail all increase the risk of HIV sero-conversion. 
+
+```{r, echo=FALSE}
+library(survival)
+library(IntCens)
+
+## BMA HIV study
+## Bangkok Metropolitan Administration HIV Study
+data <- read.table("bam.txt")
+
+
+# get the response data for ICSurvICM()
+delta <- data$delta
+gamma <- data$gamma
+n <- nrow(data)
+U <- data$U
+V <- data$V
+
+
+# Fit a proportional odds model
+obj.PO <- ICSurvICM(delta,gamma,U,V,Z=data[,5:9],model="PO")
+print.ICSurv(obj.PO)
+```
+
+
+```{r, echo=FALSE}
+#regression parameter
+beta <- obj.PO$beta
+se <- sqrt(diag(obj.PO$var))
+c1 <- round(exp(beta),2)
+c2 <- paste0("(",round(exp(beta-1.96*se),2),", ",
+             round(exp(beta+1.96*se),2),")")
+```
+```{r}
+noquote(cbind(c1,c2))
+```
+
+## Proportional hazard model in 7.2.4
+
+```{r, echo=FALSE}
+library(survival)
+library(IntCens)
+
+## BMA HIV study
+## Bangkok Metropolitan Administration HIV Study
+data <- read.table("bam.txt")
+
+
+# get the response data for ICSurvICM()
+delta <- data$delta
+gamma <- data$gamma
+n <- nrow(data)
+U <- data$U
+V <- data$V
+
+
+# Fit a proportional hazards model
+obj.PH <- ICSurvICM(delta,gamma,U,V,Z=data[,5:9],model="PH")
+print.ICSurv(obj.PH)
+
+```
+
+
+```{r, echo=FALSE}
+# Table 7.1
+# construct a table for hazard ratio and
+# 95% confidence intervals
+
+#regression parameter
+beta <- obj.PH$beta
+se <- sqrt(diag(obj.PH$var))
+c1 <- round(exp(beta),2)
+c2 <- paste0("(",round(exp(beta-1.96*se),2),", ",
+   round(exp(beta+1.96*se),2),")")
+```
+```{r}
+noquote(cbind(c1,c2))
+```
+
+Compared with 7.2.4, the effect of sex in the odds model is highly significant (p value 0.1) -- subjects who is male are 1.65 times as likely to become HIV sero-positive than female. Among all the factors, the effect of sex, need and inject are larger than them in proportional hazard model
+

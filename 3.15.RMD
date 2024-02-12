@@ -1,0 +1,97 @@
+---
+title: '3.15'
+author: "Bingyan Liang"
+date: "2023-02-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 3.15
+
+We analyze the smoking cessation data described in Chapter 1. Descriptive statistics on patient baseline characteristics and event rates are summarized in Table 1. 
+
+## Table 1
+
+```{r include=FALSE}
+# Part One: the baseline(table1)
+
+# read data
+data <- read.table("smoking.txt")
+
+# install.packages("table1")
+# install.packages("modeest")
+
+library(table1)
+library(modeest)
+library(knitr)
+
+## label
+data$status <- factor(data$status,
+                      levels = c(0,1),
+                      labels = c("censored","return"))
+
+# original tableone
+table1 <- table1(~ age + sex + race + empl + years + level + pa + nosmk | trt, data = data )
+
+# returnrate = number of return/ total length of follow up
+smoking <- read.table("smoking.txt")
+table <- data.frame(table1)
+
+smoking$trt <- factor(smoking$trt)
+c1 <- sum(smoking$status[smoking$trt == "combination"])/sum(smoking$time[smoking$trt == "combination"])
+c2 <- sum(smoking$status[smoking$trt == "patchOnly"])/sum(smoking$time[smoking$trt == "patchOnly"])
+c3 <- sum(smoking$status)/sum(smoking$time)
+returnrate <- c("return rate(1/year)",365.25*c1,365.25*c2,365.25*c3)
+
+# add a row to table 1
+tableone <- rbind(table,returnrate)
+tableone[2,1] <- "age(years)"
+tableone[13,1] <- "employment status"
+tableone[14,1] <- "  full time"
+tableone[16,1] <- "  part time"
+tableone[17,1] <- "smoking years"
+tableone[23,1] <- "past attempts"
+tableone[26,1] <- "nonsmoke(years)"
+
+```
+```{r}
+kable(tableone)
+```
+
+From Table 1, the crude event rate for the composite endpoint is remarkably lower in the patchonly group compared with the combination group. However, we also notice a considerable imbalance in race  between the two groups, with more black people in the patchonly groups. Thus, a stratified analysis is warranted to address the potential confounding by race.
+
+## Figure 1
+
+```{r, echo=FALSE}
+library(survival)
+par(mfrow=c(1,1.5))
+
+## overall
+obj <- survfit(Surv(time,status)~trt,data=smoking)
+plot(obj, ylim = c(0,1), lwd=2,frame=F, lty=c(2,1),
+     xlab="Time (days)",ylab="Relaspe-free survival probabilities",main="Overall",
+     cex.lab=1.5,cex.axis=1.5,cex.main=1.5)
+legend('bottomleft', lty=2:1,c("combination","patchOnly"),
+       lwd=2,cex=1.5)
+```
+
+As preliminary analysis, the Kaplan-Meier curves for the composite endpoint are plotted by group in Figure 1. It is clear that combination groups acts betterthant the patchonly groups. To conduct a formal test on the effect of two treatments, we first use the standard unstratified log-rank test: 
+```{r}
+## Unstratified log-rank test
+survdiff(Surv(time,status)~trt,
+         data=smoking)
+```
+The resulting Chi-square test statistic is 8 with a p-value of 0.002.
+
+Also, we conduct a log-rank test stratified by race:
+```{r}
+## Stratified log-rank test (by race)
+survdiff(Surv(time,status)~trt+ strata(race),
+         data=smoking)
+```
+The resulting Chi-square test statistic is 7.5 with a p-value of 0.008.
+
+In summary, the two results suggested that, triple-combination pharmacotherapy has a highly significant beneficial effect on the relapse-free survival rate in smoking cessation, compared to standard-duration therapy.

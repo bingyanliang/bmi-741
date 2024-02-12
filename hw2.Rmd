@@ -1,0 +1,65 @@
+---
+title: "hw2.Rmd"
+output: html_document
+date: "2022-10-04"
+---
+Bingyan Liang bliang34@wisc.edu
+
+As a starter of R, I choosed to calculate the Euclidean distance to find best
+fit models. The reason is that I think Euclidean distance is an obvious parameter 
+to estimate the distance.
+
+To get an expected table of data, I tried to use vectors and write.table function,
+but turned out not work. There were two major problem, one is the code can only
+output one line of data and I changed the loop of the print code, another problem 
+is that it is not in order, and it truns out the data is not numeric.
+
+For the 3 best fit models, my answer is data/spec-6461-56329-0925.fits with red
+shift 2156 and minimum distance 19.1827, the plot of this data set and cB58 is
+
+```{r}
+library("FITSio")
+cB58 = readFrameFromFITS("cB58_Lyman_break.fit")
+d1<-readFrameFromFITS("data/spec-6461-56329-0925.fits")
+
+library("ggplot2")
+a1=10^(3.7731)-10^(3.060698)
+plot1 <- ggplot()+geom_line(data = cB58, aes(x = 10^(LOGLAM)+a1, y = FLUX), color = "blue")+geom_line(data = d1,aes(x = 10^loglam,y=flux), color="red")
+
+print(plot1)
+```
+
+The second one is data/spec-4494-55569-0447.fits with red shift 1993 and minimum
+distance 20.2212, the plot is
+
+```{r}
+library("FITSio")
+cB58 = readFrameFromFITS("cB58_Lyman_break.fit")
+d2<-readFrameFromFITS("data/spec-4494-55569-0447.fits")
+
+library("ggplot2")
+a2=10^(3.7503)-10^(3.060698)
+plot2 <- ggplot()+geom_line(data = cB58, aes(x = 10^(LOGLAM)+a2, y = FLUX), color = "blue")+geom_line(data = d2,aes(x = 10^loglam,y=flux), color="red")
+
+print(plot2)
+```
+
+The third one is data/spec-5397-55944-0285.fits with red shift 2193 and minimum 
+distance 22.2100, the plot is
+
+```{r}
+library("FITSio")
+cB58 = readFrameFromFITS("cB58_Lyman_break.fit")
+d3<-readFrameFromFITS("data/spec-4494-55569-0447.fits")
+
+library("ggplot2")
+a3=10^(3.7703)-10^(3.060698)
+plot2 <- ggplot()+geom_line(data = cB58, aes(x = 10^(LOGLAM)+a3, y = FLUX), color = "blue")+geom_line(data = d3,aes(x = 10^loglam,y=flux), color="red")
+
+print(plot2)
+```
+
+
+
+
+
